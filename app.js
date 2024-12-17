@@ -26,20 +26,6 @@ app.use(express.urlencoded({ extended: true }));
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
-const getAllImgs = () => {
-    const imageDir = path.join(__dirname, "public", "images");
-    fs.readdir(imageDir, (err, files) => {
-        // Filter only image files (jpg, png, etc.)
-        const imageFiles = files.filter((file) =>
-            /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file)
-        );
-
-        // res.json(imageFiles); // Send the list of image file names as JSON
-        console.log(imageFiles)
-        return files
-    });
-}
-
 
 app.get('/upload', (req, res) => {
     res.render('upload')
@@ -79,6 +65,11 @@ app.get("/", async (req, res) => {
         res.status(500).send('Error retrieving images');
     }
 });
+
+app.get('/delete', async(req, res) => {
+    await pool.query('TRUNCATE TABLE imgs2')
+    res.redirect('/')
+})
 
 
 app.listen(PORT, () => {
