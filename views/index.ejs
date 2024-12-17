@@ -9,11 +9,12 @@
 <body>
   <h1>Home page!</h1>
   <a href="/upload">Upload Image!</a>
-  <h2>Images:</h2>
-  <div class="imgs">
-    <% imageFiles.map(name => { %>
-      <img class="img" src="<%= name %>" alt=<%= name %>>
-    <%  }) %>
-  </div>
+  <h2>Uploaded Images</h2>
+  <% imageFiles.forEach(image => { %>
+      <div>
+          <h3><%= image.filename %></h3>
+          <img src="<%= image.src %>" alt="<%= image.filename %>" style="width: 300px; height: auto;">
+      </div>
+  <% }) %>
 </body>
 </html>

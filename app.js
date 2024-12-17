@@ -15,16 +15,8 @@ const pool = new Pool({
     port: process.env.DATABASE_PORT,
 });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, './public/images')
-    },
-    filename: (req, file, cb) => {
-        console.log(file)
-        cb(null, Date.now() + path.extname(file.originalname))
-    }
-})
-const upload = multer({ storage })
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const assetsPath = path.join(__dirname, "public");
 app.use(express.static(assetsPath));
@@ -53,25 +45,41 @@ app.get('/upload', (req, res) => {
     res.render('upload')
 })
 
-app.post('/upload', upload.single('image'), (req, res) => {
-    console.log('Image Uploaded!')
-    res.redirect('/')
-})
+app.post('/upload', upload.single('image'), async (req, res) => {
+    try {
+        const { originalname, buffer } = req.file;
 
-app.get("/", (req, res) => {
-    const imageDir = path.join(__dirname, "public", "images");
-    fs.readdir(imageDir, (err, files) => {
-        // Filter only image files (jpg, png, etc.)
-        let imageFiles = files.filter((file) =>
-            /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file)
-        );
+        // Insert the image into the database
+        const query = "INSERT INTO imgs2 (filename, data) VALUES ($1, $2)";
+        await pool.query(query, [originalname, buffer]);
 
-        imageFiles = imageFiles.map(img => `/images/${img}`)
-        // res.json(imageFiles); // Send the list of image file names as JSON
-        res.render("index", { imageFiles })
-        console.log(imageFiles)
-    });
+        console.log('Image uploaded to database!');
+        res.redirect('/');
+    } catch (error) {
+        console.error('Error uploading image:', error);
+        res.status(500).send('Error uploading image');
+    }
 });
+
+app.get("/", async (req, res) => {
+    try {
+        const query = "SELECT id, filename, encode(data, 'base64') AS image FROM imgs2";
+        const result = await pool.query(query);
+
+        // Convert image data to base64
+        const imageFiles = result.rows.map(row => ({
+            id: row.id,
+            filename: row.filename,
+            src: `data:image/jpeg;base64,${row.image}` // Adjust content type if necessary
+        }));
+
+        res.render("index", { imageFiles });
+    } catch (error) {
+        console.error('Error retrieving images:', error);
+        res.status(500).send('Error retrieving images');
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server listening on port: ${PORT}`)
